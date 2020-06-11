@@ -3,12 +3,14 @@
     package="com.example.guessnumber">
 
     <application
+        android:name=".MainApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
+        android:label="猜數字"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true">
         <activity android:name=".MainActivity"
             android:screenOrientation="portrait"
             >

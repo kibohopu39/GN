@@ -15,6 +15,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="vertical"
+        android:layout_marginBottom="10dp"
         >
 
         <View
@@ -24,16 +25,32 @@
             android:background="@drawable/title_bg">
 
         </View>
-        <LinearLayout
+        <RelativeLayout
             android:id="@+id/inputzone"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
             android:orientation="vertical">
+            <TextView
+                android:id="@+id/degree"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="難度: 初級"
+                android:textSize="25sp"
+                />
+            <TextView
+                android:id="@+id/money"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="金錢:"
+                android:textSize="25sp"
+                android:layout_alignParentRight="true"
+                />
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:layout_gravity="right"
+                android:layout_alignParentRight="true"
+                android:layout_below="@id/money"
                 >
                 <TextView
                     android:id="@+id/input1"
@@ -44,8 +61,7 @@
                     android:layout_marginLeft="0dp"
                     android:layout_marginRight="8dp"
                     android:textSize="50sp"
-                    android:background="@drawable/input_bg"
-                    android:text="5">
+                    android:background="@drawable/input_bg">
 
                 </TextView>
                 <TextView
@@ -57,8 +73,7 @@
                     android:layout_marginLeft="0dp"
                     android:layout_marginRight="8dp"
                     android:textSize="50sp"
-                    android:background="@drawable/input_bg"
-                    android:text="5">
+                    android:background="@drawable/input_bg">
 
                 </TextView>
                 <TextView
@@ -70,40 +85,40 @@
                     android:layout_marginLeft="0dp"
                     android:layout_marginRight="8dp"
                     android:textSize="50sp"
-                    android:background="@drawable/input_bg"
-                    android:text="5">
+                    android:background="@drawable/input_bg">
                 </TextView>
+
                 <TextView
                     android:id="@+id/input4"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
-                    android:gravity="center"
                     android:layout_marginLeft="0dp"
                     android:layout_marginRight="8dp"
-                    android:textSize="50sp"
                     android:background="@drawable/input_bg"
-                    android:text="5">
-                </TextView>
+                    android:gravity="center"
+                    android:textSize="50sp"></TextView>
             </LinearLayout>
 
-        </LinearLayout>
+        </RelativeLayout>
 
     </LinearLayout>
+
     <ScrollView
+        android:id="@+id/record"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
+
         <TextView
             android:id="@+id/log"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="2dp"
             android:background="@drawable/board_bg"
-            android:text="333"
-            android:textSize="25dp">
-        </TextView>
+            android:padding="2dp"
+            android:textSize="25dp"></TextView>
     </ScrollView>
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -213,7 +228,9 @@
                 android:layout_width="0dp"
                 android:layout_weight="1"
                 android:layout_height="match_parent"
-                android:background="@drawable/btn_back">
+                android:background="@drawable/btn_back"
+                android:onClick="delete"
+                >
             </Button>
             <Button
                 android:id="@+id/clear"
