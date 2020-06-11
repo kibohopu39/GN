@@ -2,7 +2,14 @@ package com.example.guessnumber;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.AlertDialog;
+import android.content.ComponentName;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -16,9 +23,30 @@ import java.util.LinkedList;
 
 public class MainActivity extends AppCompatActivity {
     private Button n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,del,clr, guess,replay;
-    private TextView log,input1,input2,input3,input4;
+    private TextView log,input1,input2,input3,input4,degree,point,guesstimes;
     private String answer;
     private int count=0;
+    private SharedPreferences sp ;
+    private SharedPreferences.Editor editor ;
+    //跟 MyService 做繫結
+    private MyService myService;
+    private boolean isBind;
+    private ServiceConnection mConnection=new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder iBinder) {
+            //假如有連到,操作 iBinder
+            MyService.LocalBinder binder=(MyService.LocalBinder)iBinder;
+            myService=binder.getService();
+            isBind=true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            isBind=false;
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -42,7 +70,12 @@ public class MainActivity extends AppCompatActivity {
         input3=findViewById(R.id.input3);
         input4=findViewById(R.id.input4);
         log=findViewById(R.id.log);
-        initGame();
+        degree=findViewById(R.id.degree);
+        point=findViewById(R.id.point);
+        guesstimes=findViewById(R.id.guesstimes);
+        sp = getSharedPreferences("config",MODE_PRIVATE);
+        editor = sp.edit();
+        createHelp(MainApp.guessplayingStage,false);
     }
 
     @Override
@@ -53,27 +86,65 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        //啟動型先
+        playBackMusic();
+        //繫結Service
+        Intent intent=new Intent(this,MyService.class);
+        bindService(intent,mConnection,BIND_AUTO_CREATE);
+    }
 
+    @Override
+    protected void onPause() {
+        pauseBackMusic();
+        super.onPause();
 
+    }
 
-    //時間戳記來增加金錢,即今天開啟本遊戲就+多少錢
-    //本難度沒有提示,因此不會花到金錢
-    //答對可以獲得獎勵
+    @Override
+    protected void onStop() {
+        pauseBackMusic();
+        super.onStop();
+    }
+
+    @Override
+    protected void onDestroy() {
+        //解除繫結
+        if (isBind){
+            unbindService(mConnection);
+        }
+        Intent intent=new Intent(this,MyService.class);
+        stopService(intent);
+        super.onDestroy();
+    }
+
+    //玩法
+    //猜數字目前有三種難度,未來持續增加
+    //猜對可以獲得提示點
+    //提示點主要用來幫助解題
+    //時間戳記來增加解題,一天最多獲得三個提示點
     //達到猜題次數上限卻沒有猜到,就是挑戰失敗
-    //可以調整難度
-    //增加難度就會增加提示按鈕,該按鈕可以顯示出數字但最多顯示一次
 
-    private void initGame(){
+    private void initGame(int stage){
         //遊戲初始化
-
-        answer=createAnswer();//創建答案
-
         log.setText("");//把猜的紀錄刪除
         count=0;//把猜的次數規零
+        guesstimes.setText("");
         clear(null);//把最後一次的輸入清空
-        MainApp.guesstimes=8;//把次數設定好
-
-
+        switch (stage){
+            case 1:
+                answer=createAnswer(false);//創建答案
+                degree.setText("難度: 初級");
+                MainApp.guesstimes=12;//把次數設定好
+                break;
+            case 2:
+                answer=createAnswer(true);//創建答案
+                degree.setText("難度: 中級");
+                MainApp.guesstimes=30;//把次數設定好
+                break;
+        }
     }
 
 
@@ -112,11 +183,12 @@ public class MainActivity extends AppCompatActivity {
     }
     // 把數字設置到Input中
     public void setInputnumber(int whatNumber,int whichInputText){
-        //先判斷是不是有重複輸入,即按的數字必須與input中的不一樣才可以印出
         CharSequence num=""+whatNumber;
         String InputNumber[]={"0","1","2","3","4","5","6","7","8","9"};
-        if (!input1.getText().equals(num) & !input2.getText().equals(num) & !input3.getText().equals(num)){
-            switch (whichInputText){
+            //先判斷是不是有重複輸入,即按的數字必須與input中的不一樣才可以印出
+        if (!input1.getText().equals(num) & !input2.getText().equals(num) & !input3.getText().equals(num)) {
+            myService.playkeydown_sound();
+            switch (whichInputText) {
                 case 4:
                     input1.setText(InputNumber[whatNumber]);
                     break;
@@ -136,19 +208,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //做出答案
-    public String createAnswer(){
-        ArrayList pool=new ArrayList<>();
-        for (int n=0;n<10;n++){
+    public String createAnswer(boolean canRepeat) {
+        StringBuffer sb = new StringBuffer();
+        ArrayList pool = new ArrayList<>();
+        for (int n = 0; n < 10; n++) {
             pool.add(n);
         }
-        Collections.shuffle(pool);//四個數字要不一樣
-        StringBuffer sb=new StringBuffer();
-        for (int i=0;i<4;i++){
-            sb.append(pool.get(i));
+        if (!canRepeat) {//如果數字不能重複
+            Collections.shuffle(pool);//四個數字要不一樣
+            for (int i = 0; i < 4; i++) {
+                sb.append(pool.get(i));
+            }
+
+        }else{//如果可以重複
+            for (int i = 0; i < 4; i++){
+                int j=(int)Math.random()*10;//(0~1)*10=0~9,做出四個
+                sb.append(pool.get(j));
+            }
         }
         return sb.toString();
     }
-
 
     public void clear(View view) {//清空
         input1.setText("");
@@ -166,34 +245,97 @@ public class MainActivity extends AppCompatActivity {
         String strInput=(String) input1.getText()+input2.getText()+input3.getText()+input4.getText();
         String result=check(strInput);
         CharSequence temp=log.getText();//取得上一次輸入的
+        count++;
+        guesstimes.setText(count+"/"+MainApp.guesstimes);
         log.setText(strInput + " => " + result + "\n" + temp);//上一次輸入的紀錄放下面
         clear(null);//清空上一次輸入的
 
-        //如果答對,跳出獲勝自定義的Snackbar
+        //如果答對,跳出獲勝
         if (result.equals("4A0B")){
-
+            String tempStr= String.valueOf((MainApp.guessplayingStage*20+count*count-1));
+            point.setText(tempStr);
+            MainApp.guessplayingStage++;
+            createDialog(true,"恭喜你過了這層難度");
+        }else if (count==MainApp.guesstimes){
+            createDialog(false,"正確答案是:"+ "\n"+answer);
         }
-
-
     }
-    // 確定送出答案後要檢查
+    // 確定送出答案後要檢查,分成重複與不重複的檢查
     private String check(String guess){
         int A,B;A=B=0;
         for(int i=0;i<answer.length();i++){
             if (answer.charAt(i)==guess.charAt(i)){
                 A++;
-            }else if (answer.indexOf(guess.charAt(i))>0){
+            }else if(answer.indexOf(guess.charAt(i))>-1){
                 B++;
             }
         }
         return A+"A"+B+"B";
     }
 
-    public void doreplay(View view) {//重玩
-        initGame();
+    //顯示獲勝或失敗的視窗
+    private void createDialog(boolean Win,String mesg){
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setTitle(Win?"獲勝":"失敗");
+        builder.setMessage(mesg);
+        builder.setCancelable(false);
+        builder.setPositiveButton(Win?"下個難度":"重玩", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                myService.playkeydown_sound();
+                initGame(MainApp.guessplayingStage);
+            }
+        });
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
     }
 
+    //顯示遊戲說明視窗,遊戲開始會跳出一次,中間玩的時候也可以自己呼叫它
+    private void createHelp(int stage, final boolean isplaying){
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setCancelable(false);
+        builder.setPositiveButton("我瞭解了!", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                myService.playkeydown_sound();
+                if (!isplaying){//不是正在玩被叫出來
+                    initGame(MainApp.guessplayingStage);
+                }
+            }
+        });
+        switch (stage){
+            case 1:
+                builder.setTitle("初級難度說明");
+                builder.setMessage("遊戲目標為猜中四個號碼\nA代表數字與位置皆正確\n" +
+                        "B代表數字正確位置不正確\n" +
+                        "此難度下數字不重複");
+                break;
+            case 2:
+                builder.setTitle("中級難度說明");
+                builder.setMessage("遊戲目標為猜中四個號碼\nA代表數字與位置皆正確\n" +
+                        "B代表數字正確位置不正確\n" +
+                        "此難度下數字可能重複");
+                break;
+            case 3:
+                builder.setTitle("高級難度說明");
+                builder.setMessage("遊戲目標為猜中四個號碼\nA代表數字與位置皆正確\n" +
+                        "B代表數字正確位置不正確\n" +
+                        "此難度下數字可能重複");
+                break;
+        }
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
+    }
+    public void help(View view) {//點擊獲得說明
+        myService.playkeydown_sound();
+        createHelp(MainApp.guessplayingStage,true);
+    }
+    public void doreplay(View view) {//重玩
+        myService.playkeydown_sound();
+        initGame(MainApp.guessplayingStage);
+    }
     public void delete(View view) {//由右到左刪除一位數字
+        myService.playkeydown_sound();
         //首先要確定目前要刪誰
         int i= whichinput();
         switch (i){
@@ -238,5 +380,18 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
         return super.dispatchKeyEvent(event);
+    }
+
+    //播放音樂
+    public void playBackMusic(){
+        Intent intent=new Intent(this,MyService.class);
+        intent.putExtra("ACTION","start");
+        startService(intent);
+    }
+    //暫停音樂
+    public void pauseBackMusic(){
+        Intent intent=new Intent(this,MyService.class);
+        intent.putExtra("ACTION","pause");
+        startService(intent);
     }
 }

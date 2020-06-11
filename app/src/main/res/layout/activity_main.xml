@@ -37,16 +37,27 @@
                 android:layout_height="wrap_content"
                 android:text="難度: 初級"
                 android:textSize="25sp"
+                android:onClick="help"
                 />
             <TextView
                 android:id="@+id/money"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="金錢:"
+                android:text="分數:"
+                android:textSize="25sp"
+                android:layout_toLeftOf="@id/point"
+                android:layout_marginRight="15dp"
+                />
+            <TextView
+                android:id="@+id/point"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
                 android:textSize="25sp"
                 android:layout_alignParentRight="true"
                 />
             <LinearLayout
+                android:id="@+id/circles"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:layout_alignParentRight="true"
@@ -99,7 +110,24 @@
                     android:gravity="center"
                     android:textSize="50sp"></TextView>
             </LinearLayout>
+            <TextView
+                android:id="@+id/lefttimes"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="剩餘次數:"
+                android:textSize="15sp"
 
+                android:layout_alignParentBottom="true"
+                android:layout_marginRight="10dp"
+                />
+            <TextView
+                android:id="@+id/guesstimes"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:layout_alignParentBottom="true"
+                android:layout_toRightOf="@id/lefttimes"
+                />
         </RelativeLayout>
 
     </LinearLayout>
