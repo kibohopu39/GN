@@ -76,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
         repeat=findViewById(R.id.repeat);
         sp = getSharedPreferences("config",MODE_PRIVATE);
         editor = sp.edit();
-        createHelp(2,false);
+        createHelp(MainApp.guessplayingStage,false);
     }
 
     @Override
@@ -345,7 +345,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(DialogInterface dialog, int which) {
                 myService.playkeydown_sound();
                 if (!isplaying){//不是正在玩被叫出來
-                    initGame(2);
+                    initGame(MainApp.guessplayingStage);
                 }
             }
         });
