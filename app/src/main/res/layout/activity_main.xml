@@ -56,6 +56,14 @@
                 android:textSize="25sp"
                 android:layout_alignParentRight="true"
                 />
+            <TextView
+                android:id="@+id/repeat"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=""
+                android:textSize="15sp"
+                android:layout_below="@id/degree"
+                />
             <LinearLayout
                 android:id="@+id/circles"
                 android:layout_width="wrap_content"

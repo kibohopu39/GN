@@ -23,9 +23,9 @@ import java.util.LinkedList;
 
 public class MainActivity extends AppCompatActivity {
     private Button n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,del,clr, guess,replay;
-    private TextView log,input1,input2,input3,input4,degree,point,guesstimes;
+    private TextView log,input1,input2,input3,input4,degree,point,guesstimes,repeat;
     private String answer;
-    private int count=0;
+    private int count=0,repeatNum=0;
     private SharedPreferences sp ;
     private SharedPreferences.Editor editor ;
     //跟 MyService 做繫結
@@ -73,9 +73,10 @@ public class MainActivity extends AppCompatActivity {
         degree=findViewById(R.id.degree);
         point=findViewById(R.id.point);
         guesstimes=findViewById(R.id.guesstimes);
+        repeat=findViewById(R.id.repeat);
         sp = getSharedPreferences("config",MODE_PRIVATE);
         editor = sp.edit();
-        createHelp(MainApp.guessplayingStage,false);
+        createHelp(2,false);
     }
 
     @Override
@@ -121,10 +122,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //玩法
-    //猜數字目前有三種難度,未來持續增加
-    //猜對可以獲得提示點
-    //提示點主要用來幫助解題
-    //時間戳記來增加解題,一天最多獲得三個提示點
+    //猜數字目前有兩種難度,未來持續增加
+    //猜對可以獲得分數
+    //分數再關閉遊戲後會儲存
     //達到猜題次數上限卻沒有猜到,就是挑戰失敗
 
     private void initGame(int stage){
@@ -142,11 +142,12 @@ public class MainActivity extends AppCompatActivity {
             case 2:
                 answer=createAnswer(true);//創建答案
                 degree.setText("難度: 中級");
-                MainApp.guesstimes=30;//把次數設定好
+                repeatNum=checkRepeat(answer);
+                repeat.setText("有"+repeatNum+"組數字重複");
+                MainApp.guesstimes=12+repeatNum*6;//把次數設定好,沒重複的話就是原來次數12
                 break;
         }
     }
-
 
 
     //首先要解決我輸入到哪一格了,才能去判斷我按的數字要放到哪個input中
@@ -181,13 +182,31 @@ public class MainActivity extends AppCompatActivity {
         }
         setInputnumber(n,i);
     }
-    // 把數字設置到Input中
     public void setInputnumber(int whatNumber,int whichInputText){
         CharSequence num=""+whatNumber;
         String InputNumber[]={"0","1","2","3","4","5","6","7","8","9"};
             //先判斷是不是有重複輸入,即按的數字必須與input中的不一樣才可以印出
-        if (!input1.getText().equals(num) & !input2.getText().equals(num) & !input3.getText().equals(num)) {
-            myService.playkeydown_sound();
+        if(MainApp.guessplayingStage==1){
+            if (!input1.getText().equals(num) & !input2.getText().equals(num) & !input3.getText().equals(num)) {
+                myService.playkeydown_sound();
+                switch (whichInputText) {
+                    case 4:
+                        input1.setText(InputNumber[whatNumber]);
+                        break;
+                    case 3:
+                        input2.setText(InputNumber[whatNumber]);
+                        break;
+                    case 2:
+                        input3.setText(InputNumber[whatNumber]);
+                        break;
+                    case 1:
+                        input4.setText(InputNumber[whatNumber]);
+                        break;
+                    case 0:
+                        break;
+                }
+            }
+        }else{
             switch (whichInputText) {
                 case 4:
                     input1.setText(InputNumber[whatNumber]);
@@ -206,8 +225,8 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
-
     //做出答案
+
     public String createAnswer(boolean canRepeat) {
         StringBuffer sb = new StringBuffer();
         ArrayList pool = new ArrayList<>();
@@ -222,11 +241,38 @@ public class MainActivity extends AppCompatActivity {
 
         }else{//如果可以重複
             for (int i = 0; i < 4; i++){
-                int j=(int)Math.random()*10;//(0~1)*10=0~9,做出四個
+                int j=(int) (Math.random()*10);//(0~1)*10=0~9,做出四個
+//                Log.v("wei","wei:"+j);
                 sb.append(pool.get(j));
             }
         }
         return sb.toString();
+    }
+    // 把數字設置到Input中
+
+    private int checkRepeat(String answer){
+        int x=0;
+        ArrayList arrlist = new ArrayList();
+        ArrayList tempa = new ArrayList();
+        int temp=0;
+        for (int i=0;i<4;i++){
+            arrlist.add(answer.charAt(i));
+        }
+        Log.v("wei","wei:"+answer);
+        for (Object str:arrlist
+             ) {
+            if (Collections.frequency(arrlist, str)>1){
+                temp=arrlist.indexOf(str);//重複數字的第一個位置
+                tempa.add(temp);
+            }
+        }
+        //再來看他的長度,4就是2組重複,3,2就是1組數字重複,0就是都不重複
+        if (tempa.size()==4){
+            x+=2;
+        }else if (tempa.size()==3 | tempa.size()==2){
+            x++;
+        }
+        return x;
     }
 
     public void clear(View view) {//清空
@@ -299,7 +345,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(DialogInterface dialog, int which) {
                 myService.playkeydown_sound();
                 if (!isplaying){//不是正在玩被叫出來
-                    initGame(MainApp.guessplayingStage);
+                    initGame(2);
                 }
             }
         });
@@ -312,12 +358,6 @@ public class MainActivity extends AppCompatActivity {
                 break;
             case 2:
                 builder.setTitle("中級難度說明");
-                builder.setMessage("遊戲目標為猜中四個號碼\nA代表數字與位置皆正確\n" +
-                        "B代表數字正確位置不正確\n" +
-                        "此難度下數字可能重複");
-                break;
-            case 3:
-                builder.setTitle("高級難度說明");
                 builder.setMessage("遊戲目標為猜中四個號碼\nA代表數字與位置皆正確\n" +
                         "B代表數字正確位置不正確\n" +
                         "此難度下數字可能重複");
