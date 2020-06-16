@@ -22,9 +22,10 @@ import java.util.Collections;
 import java.util.LinkedList;
 
 public class MainActivity extends AppCompatActivity {
+    private ArrayList arrlist;
     private Button n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,del,clr, guess,replay;
     private TextView log,input1,input2,input3,input4,degree,point,guesstimes,repeat;
-    private String answer;
+    private String answer,result;
     private int count=0,repeatNum=0;
     private SharedPreferences sp ;
     private SharedPreferences.Editor editor ;
@@ -129,6 +130,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void initGame(int stage){
         //遊戲初始化
+        arrlist.clear();//清空儲存答案的list
         log.setText("");//把猜的紀錄刪除
         count=0;//把猜的次數規零
         guesstimes.setText("");
@@ -207,6 +209,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }else{
+            myService.playkeydown_sound();
             switch (whichInputText) {
                 case 4:
                     input1.setText(InputNumber[whatNumber]);
@@ -252,9 +255,9 @@ public class MainActivity extends AppCompatActivity {
 
     private int checkRepeat(String answer){
         int x=0;
-        ArrayList arrlist = new ArrayList();
+        arrlist = new ArrayList();
         ArrayList tempa = new ArrayList();
-        int temp=0;
+        int temp;
         for (int i=0;i<4;i++){
             arrlist.add(answer.charAt(i));
         }
@@ -289,16 +292,16 @@ public class MainActivity extends AppCompatActivity {
         }
         //把input裡的四個數字組合起來傳給check對答案
         String strInput=(String) input1.getText()+input2.getText()+input3.getText()+input4.getText();
-        String result=check(strInput);
+        result=check(strInput);
         CharSequence temp=log.getText();//取得上一次輸入的
         count++;
-        guesstimes.setText(count+"/"+MainApp.guesstimes);
         log.setText(strInput + " => " + result + "\n" + temp);//上一次輸入的紀錄放下面
+        guesstimes.setText(count+"/"+MainApp.guesstimes);
         clear(null);//清空上一次輸入的
 
         //如果答對,跳出獲勝
         if (result.equals("4A0B")){
-            String tempStr= String.valueOf((MainApp.guessplayingStage*20+count*count-1));
+            String tempStr= String.valueOf((MainApp.guessplayingStage*20+(MainApp.guesstimes-count)*(MainApp.guesstimes-count)-1));
             point.setText(tempStr);
             MainApp.guessplayingStage++;
             createDialog(true,"恭喜你過了這層難度");
@@ -306,16 +309,17 @@ public class MainActivity extends AppCompatActivity {
             createDialog(false,"正確答案是:"+ "\n"+answer);
         }
     }
-    // 確定送出答案後要檢查,分成重複與不重複的檢查
+    // 確定送出答案後要檢查
     private String check(String guess){
         int A,B;A=B=0;
-        for(int i=0;i<answer.length();i++){
-            if (answer.charAt(i)==guess.charAt(i)){
-                A++;
-            }else if(answer.indexOf(guess.charAt(i))>-1){
-                B++;
+        //有重複的輸入方式,所以要先判定有沒有重複
+            for(int i=0;i<answer.length();i++){
+                if (answer.charAt(i)==guess.charAt(i)){
+                    A++;
+                }else if(answer.indexOf(guess.charAt(i))>-1){
+                    B++;
+                }
             }
-        }
         return A+"A"+B+"B";
     }
 
@@ -330,6 +334,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(DialogInterface dialog, int which) {
                 myService.playkeydown_sound();
                 initGame(MainApp.guessplayingStage);
+
             }
         });
         AlertDialog alertDialog = builder.create();
@@ -337,7 +342,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     //顯示遊戲說明視窗,遊戲開始會跳出一次,中間玩的時候也可以自己呼叫它
-    private void createHelp(int stage, final boolean isplaying){
+    private void createHelp(final int stage, final boolean isplaying){
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         builder.setCancelable(false);
         builder.setPositiveButton("我瞭解了!", new DialogInterface.OnClickListener() {
@@ -361,6 +366,10 @@ public class MainActivity extends AppCompatActivity {
                 builder.setMessage("遊戲目標為猜中四個號碼\nA代表數字與位置皆正確\n" +
                         "B代表數字正確位置不正確\n" +
                         "此難度下數字可能重複");
+                break;
+            default:
+                builder.setTitle("遊戲完成");
+                builder.setMessage("恭喜您兩個遊戲目標都完成了!");
                 break;
         }
         AlertDialog alertDialog = builder.create();
