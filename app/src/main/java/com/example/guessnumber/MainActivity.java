@@ -22,7 +22,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 
 public class MainActivity extends AppCompatActivity {
-    private ArrayList arrlist;
+    private ArrayList arrlist,tempa;
     private Button n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,del,clr, guess,replay;
     private TextView log,input1,input2,input3,input4,degree,point,guesstimes,repeat;
     private String answer,result;
@@ -75,8 +75,12 @@ public class MainActivity extends AppCompatActivity {
         point=findViewById(R.id.point);
         guesstimes=findViewById(R.id.guesstimes);
         repeat=findViewById(R.id.repeat);
+
         sp = getSharedPreferences("config",MODE_PRIVATE);
         editor = sp.edit();
+        //放答案跟輸入的陣列
+        arrlist = new ArrayList();
+        tempa=new ArrayList();
         createHelp(MainApp.guessplayingStage,false);
     }
 
@@ -130,15 +134,16 @@ public class MainActivity extends AppCompatActivity {
 
     private void initGame(int stage){
         //遊戲初始化
-        arrlist.clear();//清空儲存答案的list
+        arrlist.clear();
+        tempa.clear();
         log.setText("");//把猜的紀錄刪除
         count=0;//把猜的次數規零
-        guesstimes.setText("");
         clear(null);//把最後一次的輸入清空
         switch (stage){
             case 1:
                 answer=createAnswer(false);//創建答案
                 degree.setText("難度: 初級");
+                repeat.setText("有"+0+"組數字重複");
                 MainApp.guesstimes=12;//把次數設定好
                 break;
             case 2:
@@ -146,9 +151,14 @@ public class MainActivity extends AppCompatActivity {
                 degree.setText("難度: 中級");
                 repeatNum=checkRepeat(answer);
                 repeat.setText("有"+repeatNum+"組數字重複");
-                MainApp.guesstimes=12+repeatNum*6;//把次數設定好,沒重複的話就是原來次數12
+                if(repeatNum==1) {//一組重複
+                    MainApp.guesstimes = 12 + repeatNum * 6;
+                }else{//兩組重複
+                    MainApp.guesstimes = 12;
+                }
                 break;
         }
+        guesstimes.setText(count+"/"+MainApp.guesstimes);
     }
 
 
@@ -242,12 +252,22 @@ public class MainActivity extends AppCompatActivity {
                 sb.append(pool.get(i));
             }
 
-        }else{//如果可以重複
+        }else{//如果要重複
             for (int i = 0; i < 4; i++){
-                int j=(int) (Math.random()*10);//(0~1)*10=0~9,做出四個
-//                Log.v("wei","wei:"+j);
-                sb.append(pool.get(j));
+                if (i>2){//3
+                    if (sb.charAt(0)!=sb.charAt(1) & sb.charAt(1)!=sb.charAt(2) & sb.charAt(0)!=sb.charAt(2)) {
+                        //第四位,且前三個都不一樣
+                        sb.append(sb.charAt(0));//TODO 直接指定第一個重複
+                    }else{//如果前面有重複
+                        int j=(int) (Math.random()*10);//(0~1)*10=0~9,做出四個
+                        sb.append(pool.get(j));
+                    }
+                }else{//0,1,2
+                    int j=(int) (Math.random()*10);//(0~1)*10=0~9,做出四個
+                    sb.append(pool.get(j));
+                }
             }
+            Log.v("wei","wei:"+sb.toString());
         }
         return sb.toString();
     }
@@ -255,13 +275,11 @@ public class MainActivity extends AppCompatActivity {
 
     private int checkRepeat(String answer){
         int x=0;
-        arrlist = new ArrayList();
-        ArrayList tempa = new ArrayList();
+        tempa = new ArrayList();
         int temp;
         for (int i=0;i<4;i++){
             arrlist.add(answer.charAt(i));
         }
-        Log.v("wei","wei:"+answer);
         for (Object str:arrlist
              ) {
             if (Collections.frequency(arrlist, str)>1){
@@ -301,10 +319,22 @@ public class MainActivity extends AppCompatActivity {
 
         //如果答對,跳出獲勝
         if (result.equals("4A0B")){
-            String tempStr= String.valueOf((MainApp.guessplayingStage*20+(MainApp.guesstimes-count)*(MainApp.guesstimes-count)-1));
+            Integer tempInt= (MainApp.guessplayingStage*20+(MainApp.guesstimes-count)*(MainApp.guesstimes-count)-1);
+            String tempStr=String.valueOf(tempInt);
             point.setText(tempStr);
-            MainApp.guessplayingStage++;
-            createDialog(true,"恭喜你過了這層難度");
+            if(MainApp.guessplayingStage==2){//關卡過兩關後，遊戲結束統計分數
+                int Highscore=sp.getInt("score",0);
+                if(Highscore<tempInt){//如果這次分數比紀錄中的高
+                    editor.putInt("score",tempInt);//紀錄分數
+                    editor.commit();
+                }
+                gameCloseDialog("恭喜您完成所有難度!\n"+
+                        "本次總分為:"+tempInt+"分\n"+
+                        "紀錄最高分:"+Highscore+"分\n");
+            }else{
+                MainApp.guessplayingStage++;
+                createDialog(true,"恭喜你過了這層難度!");
+            }
         }else if (count==MainApp.guesstimes){
             createDialog(false,"正確答案是:"+ "\n"+answer);
         }
@@ -312,14 +342,25 @@ public class MainActivity extends AppCompatActivity {
     // 確定送出答案後要檢查
     private String check(String guess){
         int A,B;A=B=0;
-        //有重複的輸入方式,所以要先判定有沒有重複
-            for(int i=0;i<answer.length();i++){
-                if (answer.charAt(i)==guess.charAt(i)){
-                    A++;
-                }else if(answer.indexOf(guess.charAt(i))>-1){
-                    B++;
+        ArrayList temp=new ArrayList();
+        for (int i = 0; i < answer.length(); i++) {
+            temp.add(guess.charAt(i));
+            if (answer.charAt(i) == guess.charAt(i)) {
+                A++;
+            } else if (answer.indexOf(guess.charAt(i)) > -1) {
+                B++;
+            }
+        }
+        //再依照有無重複的輸入方式,判定要不要做處理
+        if(tempa.size()!=0) {//有重複
+            for (int i = 0; i < answer.length(); i++) {
+                if (answer.indexOf(guess.charAt(i)) > -1 & Collections.frequency(arrlist, guess.charAt(i))<Collections.frequency(temp,guess.charAt(i)) & answer.charAt(i) != guess.charAt(i)){
+                    //假設在答案中的某個數字被輸入超過原來的次數,要扣回來
+                    //條件為目前檢測數字有在答案中,出現在答案中的次數比輸入少,目前檢測數字不等於對應答案位置的數字
+                    B--;
                 }
             }
+        }
         return A+"A"+B+"B";
     }
 
@@ -334,13 +375,30 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(DialogInterface dialog, int which) {
                 myService.playkeydown_sound();
                 initGame(MainApp.guessplayingStage);
-
             }
         });
         AlertDialog alertDialog = builder.create();
         alertDialog.show();
     }
-
+    //遊戲結束視窗
+    private void gameCloseDialog(String mesg){
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setTitle("遊戲結束");
+        builder.setMessage(mesg);
+        builder.setCancelable(false);
+        builder.setNegativeButton("重新一局", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                myService.playkeydown_sound();
+                //遊戲重新開始
+                MainApp.guessplayingStage=1;
+                point.setText("");
+                initGame(MainApp.guessplayingStage);
+            }
+        });
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
+    }
     //顯示遊戲說明視窗,遊戲開始會跳出一次,中間玩的時候也可以自己呼叫它
     private void createHelp(final int stage, final boolean isplaying){
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
@@ -365,11 +423,7 @@ public class MainActivity extends AppCompatActivity {
                 builder.setTitle("中級難度說明");
                 builder.setMessage("遊戲目標為猜中四個號碼\nA代表數字與位置皆正確\n" +
                         "B代表數字正確位置不正確\n" +
-                        "此難度下數字可能重複");
-                break;
-            default:
-                builder.setTitle("遊戲完成");
-                builder.setMessage("恭喜您兩個遊戲目標都完成了!");
+                        "此難度下數字有重複");
                 break;
         }
         AlertDialog alertDialog = builder.create();
@@ -381,7 +435,23 @@ public class MainActivity extends AppCompatActivity {
     }
     public void doreplay(View view) {//重玩
         myService.playkeydown_sound();
-        initGame(MainApp.guessplayingStage);
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setCancelable(false);
+        builder.setMessage("確定要重新遊玩這個難度嗎?");
+        builder.setPositiveButton("重玩這個難度", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                initGame(MainApp.guessplayingStage);
+            }
+        });
+        builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+            }
+        });
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
     }
     public void delete(View view) {//由右到左刪除一位數字
         myService.playkeydown_sound();
