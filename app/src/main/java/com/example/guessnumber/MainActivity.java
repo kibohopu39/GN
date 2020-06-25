@@ -19,14 +19,15 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Set;
 
 
 public class MainActivity extends AppCompatActivity {
-    private ArrayList arrlist,tempa;
+    private ArrayList arrlist;
     private Button n1,n2,n3,n4,n5,n6,n7,n8,n9,n0,del,clr, guess,replay;
     private TextView log,input1,input2,input3,input4,degree,point,guesstimes,repeat;
     private String answer,result;
-    private int count=0,repeatNum=0;
+    private int count=0,repeatNum=0,temp=0,x=0;//temp是用來判斷數字重複累計,x是多少組重複
     private SharedPreferences sp ;
     private SharedPreferences.Editor editor ;
     //跟 MyService 做繫結
@@ -80,7 +81,6 @@ public class MainActivity extends AppCompatActivity {
         editor = sp.edit();
         //放答案跟輸入的陣列
         arrlist = new ArrayList();
-        tempa=new ArrayList();
         createHelp(MainApp.guessplayingStage,false);
     }
 
@@ -135,7 +135,8 @@ public class MainActivity extends AppCompatActivity {
     private void initGame(int stage){
         //遊戲初始化
         arrlist.clear();
-        tempa.clear();
+        temp=0;
+        x=0;
         log.setText("");//把猜的紀錄刪除
         count=0;//把猜的次數規零
         clear(null);//把最後一次的輸入清空
@@ -274,23 +275,22 @@ public class MainActivity extends AppCompatActivity {
     // 把數字設置到Input中
 
     private int checkRepeat(String answer){
-        int x=0;
-        tempa = new ArrayList();
-        int temp;
         for (int i=0;i<4;i++){
             arrlist.add(answer.charAt(i));
         }
         for (Object str:arrlist
              ) {
-            if (Collections.frequency(arrlist, str)>1){
-                temp=arrlist.indexOf(str);//重複數字的第一個位置
-                tempa.add(temp);
+            if (Collections.frequency(arrlist, str)>1 & Collections.frequency(arrlist, str)<4) {
+                temp++;//重複時累計,排除重複四次的
+            }else if(Collections.frequency(arrlist, str)==4){
+                temp=2;
+                break;
             }
         }
-        //再來看他的長度,4就是2組重複,3,2就是1組數字重複,0就是都不重複
-        if (tempa.size()==4){
+        //再來看累計,4就是2組重複,3,2就是1組數字重複,0就是都不重複
+        if (temp==4){
             x+=2;
-        }else if (tempa.size()==3 | tempa.size()==2){
+        }else if (temp==3 | temp==2){
             x++;
         }
         return x;
@@ -341,29 +341,31 @@ public class MainActivity extends AppCompatActivity {
     }
     // 確定送出答案後要檢查
     private String check(String guess){
-        int A,B;A=B=0;
-        ArrayList temp=new ArrayList();
+        int A,B,C;A=B=C=0;
+        ArrayList tempa=new ArrayList();
         for (int i = 0; i < answer.length(); i++) {
-            temp.add(guess.charAt(i));
-            if (answer.charAt(i) == guess.charAt(i)) {
+            tempa.add(guess.charAt(i));
+            if(answer.charAt(i)==guess.charAt(i)){
                 A++;
-            } else if (answer.indexOf(guess.charAt(i)) > -1) {
+            }else if(answer.indexOf(guess.charAt(i))>-1){
                 B++;
             }
         }
-        //再依照有無重複的輸入方式,判定要不要做處理
-        if(tempa.size()!=0) {//有重複
-            for (int i = 0; i < answer.length(); i++) {
-                if (answer.indexOf(guess.charAt(i)) > -1 & Collections.frequency(arrlist, guess.charAt(i))<Collections.frequency(temp,guess.charAt(i)) & answer.charAt(i) != guess.charAt(i)){
-                    //假設在答案中的某個數字被輸入超過原來的次數,要扣回來
-                    //條件為目前檢測數字有在答案中,出現在答案中的次數比輸入少,目前檢測數字不等於對應答案位置的數字
-                    B--;
+        if(temp!=0){//假設有重複
+            for (int i = 0; i < answer.length(); i++){
+                if(guess.indexOf(answer.charAt(i))>-1 & Collections.frequency(arrlist,answer.charAt(i))<=Collections.frequency(tempa,answer.charAt(i))&answer.charAt(i)!=guess.charAt(i)){
+                    //一一看答案數字有沒有出現在回答測試數字中,,對應位置不是測試數字
+                    C++;
+                }
+                if(answer.indexOf(guess.charAt(i))>-1 & Collections.frequency(arrlist,guess.charAt(i))>Collections.frequency(tempa,guess.charAt(i))&answer.charAt(i)!=guess.charAt(i)){
+                    //反過來問
+                    C++;
                 }
             }
+            B=C;
         }
         return A+"A"+B+"B";
     }
-
     //顯示獲勝或失敗的視窗
     private void createDialog(boolean Win,String mesg){
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
